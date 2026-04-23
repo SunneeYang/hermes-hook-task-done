@@ -118,9 +118,20 @@ async def handle(event_type, context):
     session_id = context.get("session_id", "")
     response = context.get("response", "")
 
-    asyncio.create_task(
-        _send_delayed_notification(platform, session_id, response)
-    )
+    if platform in ("cli", "tui"):
+        # CLI/TUI: 同步输出，不延迟、不创建后台任务
+        # 避免 single-shot 模式下进程退出前后台任务被取消
+        failed = any(k in response for k in ("⚠️", "❌", "failed", "encountered an error"))
+        status = "⚠️" if failed else "✅"
+        session = _load_session(session_id) or {}
+        line = _build_status_line(status, session)
+        # flush=True 确保立即输出，前导符\n避免被 TUI 界面覆盖
+        print(f"\n[task_done] {line}\n", flush=True)
+    else:
+        # 其他平台: 后台延迟通知
+        asyncio.create_task(
+            _send_delayed_notification(platform, session_id, response)
+        )
 
 
 async def _send_delayed_notification(platform, session_id, response) -> None:
