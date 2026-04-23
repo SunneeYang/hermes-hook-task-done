@@ -9,7 +9,13 @@ Fires on `agent:end` and reports:
 - Duration
 - Tool-call count
 
-Currently supports **Feishu** (Lark) notifications out of the box. CLI/TUI sessions print to stdout.
+Currently supports **Feishu** (Lark) only.
+
+## Requirements
+
+- Hermes gateway must be running (`hermes gateway run`)
+- `FEISHU_APP_ID` and `FEISHU_APP_SECRET` environment variables
+- `httpx` Python package (usually already present in the Hermes environment)
 
 ## Install
 
@@ -38,10 +44,10 @@ curl -fsSL https://raw.githubusercontent.com/SunneeYang/hermes-hook-task-done/ma
 
 > ⚠️ **Restart the gateway after uninstall** so the old handler is flushed from memory.
 
-## Requirements
+## Notes
 
-- `FEISHU_APP_ID` and `FEISHU_APP_SECRET` env vars (for Feishu delivery)
-- `httpx` Python package (usually already present in Hermes environment)
+- This hook only works in **gateway mode**. It does **not** trigger when running `hermes` in standalone CLI/TUI mode.
+- The notification is sent via Feishu OpenAPI with a 3-second delay so it appears after the main response.
 
 ## Files
 
