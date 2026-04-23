@@ -7,31 +7,54 @@ from pathlib import Path
 import httpx
 
 
-def _find_chat_id(session_id: str) -> str | None:
-    """从 sessions.json 反查 chat_id"""
-    sessions_file = Path.home() / ".hermes" / "sessions" / "sessions.json"
-    if not sessions_file.exists():
-        return None
+def _get_profile_sessions_dir() -> Path | None:
+    """根据本文件位置推断 profile sessions 目录"""
     try:
-        data = json.loads(sessions_file.read_text())
+        hook_dir = Path(__file__).resolve().parent
+        # 路径模式: .../profiles/<profile>/hooks/<hook_name>/handler.py
+        if "profiles" in hook_dir.parts and "hooks" in hook_dir.parts:
+            profile_dir = hook_dir.parent.parent  # 跳到 <profile>
+            sessions_dir = profile_dir / "sessions"
+            if sessions_dir.exists():
+                return sessions_dir
     except Exception:
-        return None
-    for entry in data.values():
-        if entry.get("session_id") == session_id:
-            origin = entry.get("origin") or {}
-            return origin.get("chat_id")
+        pass
+    return None
+
+
+def _find_chat_id(session_id: str) -> str | None:
+    """从 sessions.json 反查 chat_id，优先 profile 目录"""
+    # 先查 profile 目录
+    profile_dir = _get_profile_sessions_dir()
+    for sessions_file in ([profile_dir / "sessions.json"] if profile_dir else []) + [
+        Path.home() / ".hermes" / "sessions" / "sessions.json"
+    ]:
+        if not sessions_file.exists():
+            continue
+        try:
+            data = json.loads(sessions_file.read_text())
+        except Exception:
+            continue
+        for entry in data.values():
+            if entry.get("session_id") == session_id:
+                origin = entry.get("origin") or {}
+                return origin.get("chat_id")
     return None
 
 
 def _load_session(session_id: str) -> dict | None:
-    """加载 session JSON 文件"""
-    session_file = Path.home() / ".hermes" / "sessions" / f"session_{session_id}.json"
-    if not session_file.exists():
-        return None
-    try:
-        return json.loads(session_file.read_text())
-    except Exception:
-        return None
+    """加载 session JSON 文件，优先 profile 目录"""
+    profile_dir = _get_profile_sessions_dir()
+    for session_file in ([profile_dir / f"session_{session_id}.json"] if profile_dir else []) + [
+        Path.home() / ".hermes" / "sessions" / f"session_{session_id}.json"
+    ]:
+        if not session_file.exists():
+            continue
+        try:
+            return json.loads(session_file.read_text())
+        except Exception:
+            continue
+    return None
 
 
 def _format_duration(seconds: float) -> str:
