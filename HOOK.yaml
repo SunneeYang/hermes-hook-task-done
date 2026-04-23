@@ -1,0 +1,4 @@
+name: task-done-notification
+description: Agent 任务完成后发送平台通知
+events:
+  - agent:end
